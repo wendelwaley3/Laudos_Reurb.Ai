@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoLaudo.AI - Análise REURB</title>
+
+    <!-- Google Fonts: Inter (para um visual moderno) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Inclui o CSS do Leaflet (biblioteca de mapas) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAo9TchMFlAbEFWVDzQvAgyAOch4nMgeXx3KKtQh/"
+        crossorigin=""/>
+    <!-- Inclui seu CSS personalizado -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="logo">GeoLaudo.AI</div>
+        <nav>
+            <a href="#" data-section="dashboard" class="active">Dashboard</a>
+            <a href="#" data-section="upload">Upload de Dados</a>
+            <a href="#" data-section="relatorios">Relatórios</a>
+            <a href="#" data-section="instrucoes">Instruções</a>
+        </nav>
+        <button id="exportReportBtn">Exportar Relatório</button>
+    </header>
+
+    <main>
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="container active">
+            <h2>Filtros de Análise</h2>
+            <div class="filters">
+                <select id="nucleusFilter">
+                    <option value="all">Todos os Núcleos</option>
+                    <!-- Opções de núcleo serão adicionadas via JS -->
+                </select>
+                <button id="applyFiltersBtn">Aplicar Filtros</button>
+            </div>
+
+            <div class="dashboard-cards">
+                <div class="card">
+                    <h3>Total de Lotes</h3>
+                    <p id="totalLotes">0</p>
+                    <span>lotes cadastrados</span>
+                </div>
+                <div class="card error">
+                    <h3>Lotes em Risco</h3>
+                    <p id="lotesRisco">0</p>
+                    <span>do total</span>
+                </div>
+                <div class="card warning">
+                    <h3>Lotes em APP</h3>
+                    <p id="lotesApp">0</p>
+                    <span>necessitam atenção</span>
+                </div>
+                <div class="card info">
+                    <h3>Custo de Intervenção</h3>
+                    <p>R$ <span id="custoEstimado">0,00</span></p>
+                    <span>estimativa total</span>
+                </div>
+            </div>
+
+            <h2>Visualização Geoespacial</h2>
+            <div id="mapid"></div>
+
+            <div class="map-legend">
+                <h3>Legenda do Mapa</h3>
+                <div class="legend-item"><input type="checkbox" id="toggleLotes" checked><label for="toggleLotes">Lotes</label> <span class="legend-color lotes"></span></div>
+                <div class="legend-item"><input type="checkbox" id="togglePoligonais"><label for="togglePoligonais">Poligonais</label> <span class="legend-color poligonais"></span></div>
+                <div class="legend-item"><input type="checkbox" id="toggleAPP"><label for="toggleAPP">APP</label> <span class="legend-color app"></span></div>
+
+                <h4>Áreas de Risco:</h4>
+                <ul>
+                    <li class="risk-low">Baixo Risco (1)</li>
+                    <li class="risk-medium">Médio Risco (2)</li>
+                    <li class="risk-high">Alto Risco (3)</li>
+                    <li class="risk-very-high">Muito Alto Risco (4)</li>
+                </ul>
+                <p class="click-info">Clique nos elementos do mapa para ver detalhes</p>
+            </div>
+
+            <h2>Análise de Riscos</h2>
+            <ul class="risk-summary">
+                <li class="risk-low">Baixo Risco: <span id="riskLowCount">0</span> lotes</li>
+                <li class="risk-medium">Médio Risco: <span id="riskMediumCount">0</span> lotes</li>
+                <li class="risk-high">Alto Risco: <span id="riskHighCount">0</span> lotes</li>
+                <li class="risk-very-high">Muito Alto Risco: <span id="riskVeryHighCount">0</span> lotes</li>
+            </ul>
+            <h3>Resumo de Intervenções</h3>
+            <ul>
+                <li><span id="areasIdentificadas">0</span> áreas de risco identificadas</li>
+                <li><span id="areasIntervencao">0</span> áreas demandam intervenção estrutural</li>
+            </ul>
+
+            <h2>Análise Comparativa por Núcleo</h2>
+            <div id="nucleusComparisonChart" class="chart-container">
+                <p>Nenhum dado disponível. Faça o upload das camadas para visualizar o gráfico.</p>
+                <!-- Opcional: Adicionar um canvas aqui para Chart.js se for implementar gráficos -->
+                <!-- <canvas id="myChart"></canvas> -->
+            </div>
+
+            <h2>Dados Detalhados dos Lotes</h2>
+            <div class="data-table-controls">
+                <input type="text" id="lotSearch" placeholder="Buscar lote...">
+                <button id="exportTableBtn">Exportar</button>
+            </div>
+            <div class="table-scroll-wrapper">
+                <table id="lotesDataTable">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Núcleo</th>
+                            <th>Tipo de Uso</th>
+                            <th>Área (m²)</th>
+                            <th>Status Risco</th>
+                            <th>APP</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="7">Nenhum dado disponível. Faça o upload das camadas primeiro.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Upload Section -->
+        <section id="upload" class="container">
+            <h2>Upload de Camadas GeoJSON</h2>
+            <div class="upload-area">
+                <label for="geojsonFileInput" class="drag-drop-area">
+                    <p class="drag-text">Arraste e solte seus arquivos GeoJSON aqui</p>
+                    <p>ou clique para selecionar</p>
+                    <button type="button">Selecionar Arquivos</button>
+                    <input type="file" id="geojsonFileInput" accept=".geojson,.json" multiple style="display: none;">
+                </label>
+            </div>
+            <div class="uploaded-files-preview">
+                <h3>Arquivos Selecionados:</h3>
+                <ul id="fileList">
+                    <li>Nenhum arquivo selecionado.</li>
+                </ul>
+            </div>
+            <button id="processAndLoadBtn">Processar e Carregar Dados</button>
+            <p id="uploadStatus" class="status-message"></p>
+        </section>
+
+        <!-- Relatórios Section -->
+        <section id="relatorios" class="container">
+            <h2>Gerador de Relatórios com IA</h2>
+            <div class="report-generator-grid">
+                <div class="report-config">
+                    <h3>Configurações do Relatório</h3>
+                    <label for="reportType">Tipo de Relatório</label>
+                    <select id="reportType">
+                        <option value="completo">Relatório Completo</option>
+                        <option value="resumido">Relatório Resumido</option>
+                        <option value="risco">Análise de Risco</option>
+                    </select>
+
+                    <label for="nucleosAnalise">Núcleos para Análise</label>
+                    <select id="nucleosAnalise">
+                        <option value="none">Nenhum núcleo disponível. Faça o upload dos dados primeiro.</option>
+                        <!-- Opções de núcleo serão adicionadas via JS -->
+                    </select>
+
+                    <h4>Seções a Incluir</h4>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="incDadosGerais" checked> Dados Gerais</label>
+                        <label><input type="checkbox" id="incAnaliseRiscos" checked> Análise de Riscos</label>
+                        <label><input type="checkbox" id="incAreasPublicas"> Áreas Públicas</label>
+                        <label><input type="checkbox" id="incInfraestrutura"> Infraestrutura</label>
+                    </div>
+                    <button id="generateReportBtn">Gerar Relatório com IA</button>
+                </div>
+                <div class="report-output">
+                    <h3>Relatório Gerado</h3>
+                    <div id="generatedReportContent" class="report-content">
+                        Nenhum relatório gerado ainda. Configure as opções e clique em "Gerar Relatório".
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Instruções Section -->
+        <section id="instrucoes" class="container">
+            <h2>Instruções de Uso</h2>
+            <p>Bem-vindo ao GeoLaudo.AI! Este aplicativo foi projetado para auxiliar na análise e geração de relatórios para Regularização Fundiária Urbana (REURB), funcionando completamente no seu navegador.</p>
+            <h3>Como usar:</h3>
+            <ol>
+                <li><strong>Upload de Dados:</strong> Navegue até a aba "Upload de Dados". Arraste e solte seus arquivos GeoJSON (para lotes, APPs, infraestrutura, poligonais etc.) ou clique em "Selecionar Arquivos".
+                    <p class="note"><strong>Importante:</strong> Para que a "Análise de Riscos" e "Lotes em APP" funcionem corretamente no dashboard e relatórios, é fundamental que o GeoJSON dos seus lotes já contenha propriedades como <code>risco</code> (ex: "Baixo", "Médio", "Alto", "Muito Alto"), <code>app</code> (ex: <code>true</code> ou <code>false</code>, ou "sim"/"não"), <code>nucleo</code> e <code>custo_intervencao</code>.</p>
+                </li>
+                <li><strong>Processar e Carregar:</strong> Após selecionar os arquivos, clique em "Processar e Carregar Dados". O aplicativo irá ler, processar e exibir suas camadas no mapa.</li>
+                <li><strong>Dashboard:</strong> A aba "Dashboard" exibe um resumo estatístico dos seus dados, como total de lotes, lotes em risco, lotes em APP, e uma estimativa de custo. Use os filtros para visualizar dados de núcleos específicos.</li>
+                <li><strong>Visualização Geoespacial:</strong> O mapa interativo permite explorar suas camadas. Use a legenda para ligar/desligar a visibilidade das camadas. Clique nos elementos do mapa para ver seus atributos detalhados em um popup.</li>
+                <li><strong>Análise de Riscos:</strong> O dashboard também mostra um resumo da distribuição de risco dos lotes carregados.</li>
+                <li><strong>Dados Detalhados:</strong> A tabela na parte inferior do Dashboard lista os lotes com seus principais atributos. Você pode buscar lotes específicos e exportar a tabela para CSV. O botão "Ver no Mapa" centraliza e dá zoom no lote selecionado.</li>
+                <li><strong>Relatórios:</strong> Na aba "Relatórios", configure o tipo de relatório, selecione os núcleos (se aplicável) e as seções a incluir. Clique em "Gerar Relatório com IA" para criar um relatório sumarizado.</li>
+                <li><strong>Exportar Relatório:</strong> Use o botão "Exportar Relatório" no cabeçalho para baixar o relatório gerado em formato de texto.</li>
+            </ol>
+            <p><strong>Desempenho:</strong> Como este aplicativo funciona totalmente no navegador, o desempenho pode variar dependendo do tamanho e complexidade dos arquivos GeoJSON carregados. Para datasets muito grandes ou análises espaciais complexas em tempo real (como interseção de várias camadas grandes), uma solução com backend seria mais adequada.</p>
+            <p>Esperamos que o GeoLaudo.AI seja uma ferramenta útil para você!</p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 GeoLaudo.AI. Todos os direitos reservados.</p>
+    </footer>
+
+    <!-- Inclui o JS do Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-CIJ85Q+Xw+x2C9D1X52D5G8S8F8N5X99T999V9999Y="
+        crossorigin=""></script>
+    <!-- Inclui o Turf.js para operações geoespaciais client-side (se for usar extensivamente) -->
+    <!-- Embora não seja amplamente usado neste template, está aqui para referência futura. -->
+    <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+    <!-- Inclui seu JS personalizado -->
+    <script src="js/app.js"></script>
+</body>
+</html>
